@@ -9,7 +9,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import pendaftaran.Pendaftaran;
 
 /**
  *
@@ -27,17 +26,17 @@ public class DBConnection {
             Class.forName("com.mysql.cj.jdbc.Driver");
             try {
                 Connection con = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/mysql?zeroDateTimeBehavior=CONVERT_TO_NULL",
+                    "jdbc:mysql://localhost:3306/booking_rooms?zeroDateTimeBehavior=CONVERT_TO_NULL",
                     "root",
                     ""
                 );
                 System.out.println(con);
                 
             } catch (SQLException ex) {
-                Logger.getLogger(Pendaftaran.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
             }
         } catch (ClassNotFoundException ex) {
-            Logger.getLogger(Pendaftaran.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
