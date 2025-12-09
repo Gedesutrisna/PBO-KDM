@@ -4,19 +4,59 @@
  */
 package views;
 
+import database.DBConnection;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.JSpinner; 
 /**
  *
  * @author user
  */
 public class RoomForm extends javax.swing.JInternalFrame {
-
+    String buffNama;
+    DBConnection db = new DBConnection();
+    Connection con;
+    DefaultTableModel tm;
+    
     /**
      * Creates new form RoomForm
      */
     public RoomForm() {
-        initComponents();
+        initComponents();        
+        connect();
+        refreshTable();
     }
-
+    private void connect(){
+        con = db.connect();
+    }    private void refreshTable() {
+        tm = new DefaultTableModel(
+            null,
+            new Object[] { "Name", "Capacity", "Location" }
+        );
+        roomTable.setModel(tm);
+        tm.getDataVector().removeAllElements ();
+        try {
+            PreparedStatement s = con.prepareStatement ("SELECT name, capacity, location FROM rooms");
+            ResultSet r = s.executeQuery();
+            while (r.next()) {
+                Object[] data = {
+                    r.getString (1), r.getInt (2), r.getString (3)
+                };
+                tm.addRow(data);
+            }
+        }catch (Exception e) {
+            System.out.print ("ERROR KUERI KE DATABASE: \n" + e + "\n\n");
+        }
+    }
+    private void clearInputs() {
+        nameInput.setText("");
+        capacityInput.setValue(1); 
+        locationInput.setText("");
+        buffNama = null; 
+    }
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -27,7 +67,6 @@ public class RoomForm extends javax.swing.JInternalFrame {
     private void initComponents() {
 
         nameInput = new javax.swing.JTextField();
-        capacityInput = new javax.swing.JTextField();
         locationInput = new javax.swing.JTextField();
         nameLabel = new javax.swing.JLabel();
         capacityLabel = new javax.swing.JLabel();
@@ -36,16 +75,13 @@ public class RoomForm extends javax.swing.JInternalFrame {
         deleteButton = new javax.swing.JButton();
         editButton = new javax.swing.JButton();
         cancelButton = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        roomTable = new javax.swing.JTable();
+        capacityInput = new javax.swing.JSpinner();
 
         nameInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 nameInputActionPerformed(evt);
-            }
-        });
-
-        capacityInput.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                capacityInputActionPerformed(evt);
             }
         });
 
@@ -69,34 +105,72 @@ public class RoomForm extends javax.swing.JInternalFrame {
         });
 
         deleteButton.setText("Hapus");
+        deleteButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteButtonActionPerformed(evt);
+            }
+        });
 
         editButton.setText("Edit");
+        editButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                editButtonActionPerformed(evt);
+            }
+        });
 
         cancelButton.setText("Batal");
+        cancelButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cancelButtonActionPerformed(evt);
+            }
+        });
+
+        roomTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        roomTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                roomTableMouseClicked(evt);
+            }
+        });
+        jScrollPane1.setViewportView(roomTable);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(55, 55, 55)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(locationLabel)
-                    .addComponent(capacityLabel)
-                    .addComponent(nameLabel)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(nameInput)
-                        .addComponent(locationInput)
-                        .addComponent(capacityInput, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(createButton)
-                        .addGap(18, 18, 18)
-                        .addComponent(editButton)
-                        .addGap(18, 18, 18)
-                        .addComponent(deleteButton)
-                        .addGap(18, 18, 18)
-                        .addComponent(cancelButton)))
-                .addContainerGap(72, Short.MAX_VALUE))
+                        .addGap(55, 55, 55)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(locationLabel)
+                            .addComponent(capacityLabel)
+                            .addComponent(nameLabel)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(createButton)
+                                .addGap(18, 18, 18)
+                                .addComponent(editButton)
+                                .addGap(18, 18, 18)
+                                .addComponent(deleteButton)
+                                .addGap(18, 18, 18)
+                                .addComponent(cancelButton))
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                .addComponent(locationInput, javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(capacityInput, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 198, Short.MAX_VALUE)
+                                .addComponent(nameInput, javax.swing.GroupLayout.Alignment.LEADING))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 418, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -109,7 +183,7 @@ public class RoomForm extends javax.swing.JInternalFrame {
                 .addComponent(capacityLabel)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(capacityInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(12, 12, 12)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(locationLabel)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(locationInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -119,7 +193,9 @@ public class RoomForm extends javax.swing.JInternalFrame {
                     .addComponent(deleteButton)
                     .addComponent(editButton)
                     .addComponent(cancelButton))
-                .addContainerGap(42, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 286, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
 
         pack();
@@ -129,29 +205,121 @@ public class RoomForm extends javax.swing.JInternalFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_nameInputActionPerformed
 
-    private void capacityInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_capacityInputActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_capacityInputActionPerformed
-
     private void locationInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_locationInputActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_locationInputActionPerformed
 
     private void createButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_createButtonActionPerformed
         // TODO add your handling code here:
+        try {
+            PreparedStatement ps = con.prepareStatement("INSERT INTO rooms (name, capacity, location) VALUES (?,?,?)");
+            ps.setString(1, nameInput.getText());
+            ps.setInt(2, (Integer) capacityInput.getValue());        
+            ps.setString(3, locationInput.getText());
+
+            int affectedRows = ps.executeUpdate();
+            if (affectedRows > 0) {
+                JOptionPane.showMessageDialog(this, "Ruangan berhasil ditambahkan!");
+            }
+
+            refreshTable();
+            clearInputs();
+        } catch(Exception e) {
+            System.out.print("ERROR QUERY KE DATABASE:\n" + e + "\n\n");
+            JOptionPane.showMessageDialog(this, "Gagal menambahkan ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_createButtonActionPerformed
+
+    private void editButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editButtonActionPerformed
+        // TODO add your handling code here:
+        if (buffNama == null || buffNama.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Pilih baris di tabel yang ingin diedit terlebih dahulu.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            PreparedStatement ps = con.prepareStatement("UPDATE rooms SET name=?, capacity=?, location=? WHERE name=?");
+            
+            ps.setString(1, nameInput.getText());
+            ps.setInt(2, (Integer) capacityInput.getValue());        
+            ps.setString(3, locationInput.getText());
+            
+            ps.setString(4, buffNama); 
+
+            int affectedRows = ps.executeUpdate();
+            if (affectedRows > 0) {
+                JOptionPane.showMessageDialog(this, "Ruangan berhasil diubah!");
+            } else {
+                 JOptionPane.showMessageDialog(this, "Tidak ada ruangan yang diubah. Nama ruangan lama mungkin tidak ditemukan.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            }
+
+            refreshTable();
+            clearInputs();
+        } catch(Exception e) {
+            System.out.print("ERROR QUERY KE DATABASE:\n" + e + "\n\n");
+            JOptionPane.showMessageDialog(this, "Gagal mengedit ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_editButtonActionPerformed
+
+    private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
+        // TODO add your handling code here:
+        if (nameInput.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Pilih baris di tabel yang ingin dihapus terlebih dahulu.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        int dialogResult = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus ruangan " + nameInput.getText() + "?", "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION);
+        if (dialogResult == JOptionPane.YES_OPTION) {
+            try {
+                PreparedStatement ps = con.prepareStatement("DELETE FROM rooms WHERE name=?");
+                ps.setString(1, nameInput.getText());
+                
+                int affectedRows = ps.executeUpdate();
+                if (affectedRows > 0) {
+                    JOptionPane.showMessageDialog(this, "Ruangan berhasil dihapus!");
+                } else {
+                     JOptionPane.showMessageDialog(this, "Tidak ada ruangan yang dihapus. Nama ruangan tidak ditemukan.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+                }
+
+                refreshTable();
+                clearInputs();
+            } catch(Exception e) {
+                System.out.print("ERROR QUERY KE DATABASE:\n" + e + "\n\n");
+                JOptionPane.showMessageDialog(this, "Gagal menghapus ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }//GEN-LAST:event_deleteButtonActionPerformed
+
+    private void cancelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cancelButtonActionPerformed
+        // TODO add your handling code here:
+        clearInputs();
+    }//GEN-LAST:event_cancelButtonActionPerformed
+
+    private void roomTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_roomTableMouseClicked
+        // TODO add your handling code here:
+        int selectedRow = roomTable.getSelectedRow();
+        if (selectedRow >= 0) {
+            buffNama = tm.getValueAt(selectedRow, 0).toString(); 
+            
+            nameInput.setText(tm.getValueAt(selectedRow, 0).toString());
+            capacityInput.setValue(Integer.valueOf(tm.getValueAt(selectedRow, 1).toString()));
+            locationInput.setText(tm.getValueAt(selectedRow, 2).toString());
+        }
+    }//GEN-LAST:event_roomTableMouseClicked
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton cancelButton;
-    private javax.swing.JTextField capacityInput;
+    private javax.swing.JSpinner capacityInput;
     private javax.swing.JLabel capacityLabel;
     private javax.swing.JButton createButton;
     private javax.swing.JButton deleteButton;
     private javax.swing.JButton editButton;
+    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextField locationInput;
     private javax.swing.JLabel locationLabel;
     private javax.swing.JTextField nameInput;
     private javax.swing.JLabel nameLabel;
+    private javax.swing.JTable roomTable;
     // End of variables declaration//GEN-END:variables
 }

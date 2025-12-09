@@ -16,16 +16,14 @@ import java.util.logging.Logger;
  */
 public class DBConnection {
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
+
+    public Connection connect() {      
+        Connection con = null;
         try {
             // TODO code application logic here
-
             Class.forName("com.mysql.cj.jdbc.Driver");
             try {
-                Connection con = DriverManager.getConnection(
+                con = DriverManager.getConnection(
                     "jdbc:mysql://localhost:3306/booking_rooms?zeroDateTimeBehavior=CONVERT_TO_NULL",
                     "root",
                     ""
@@ -38,6 +36,7 @@ public class DBConnection {
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
         }
+        return con;
     }
     
 }

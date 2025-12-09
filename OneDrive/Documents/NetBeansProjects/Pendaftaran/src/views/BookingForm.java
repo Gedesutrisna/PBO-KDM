@@ -75,6 +75,11 @@ public class BookingForm extends javax.swing.JInternalFrame {
         });
 
         deleteButton.setText("Hapus");
+        deleteButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteButtonActionPerformed(evt);
+            }
+        });
 
         editButton.setText("Edit");
 
@@ -124,9 +129,7 @@ public class BookingForm extends javax.swing.JInternalFrame {
                                     .addComponent(capacityLabel)
                                     .addComponent(locationLabel1))
                                 .addGap(0, 0, Short.MAX_VALUE))
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(locationLabel3)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addComponent(locationLabel3)
                             .addComponent(endDateInput))))
                 .addGap(54, 54, 54))
         );
@@ -192,6 +195,10 @@ public class BookingForm extends javax.swing.JInternalFrame {
     private void eventInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_eventInputActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_eventInputActionPerformed
+
+    private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_deleteButtonActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
