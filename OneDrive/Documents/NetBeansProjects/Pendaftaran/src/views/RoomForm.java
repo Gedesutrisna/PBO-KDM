@@ -5,57 +5,98 @@
 package views;
 
 import database.DBConnection;
+import service.RoomService;
+import models.Room;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.JSpinner; 
+
 /**
  *
  * @author user
  */
 public class RoomForm extends javax.swing.JInternalFrame {
-    String buffNama;
-    DBConnection db = new DBConnection();
-    Connection con;
-    DefaultTableModel tm;
+    // Service Layer
+    private final RoomService roomService;
     
-    /**
-     * Creates new form RoomForm
-     */
+    // UI State
+    private DefaultTableModel tableModel;
+    private Room selectedRoom;
+    
     public RoomForm() {
-        initComponents();        
-        connect();
+        // Initialize database connection
+        DBConnection db = new DBConnection();
+        Connection con = db.connect();
+        
+        // Initialize service
+        this.roomService = new RoomService(con);
+        
+        // Initialize UI
+        initComponents();
         refreshTable();
+        clearInputs();
     }
-    private void connect(){
-        con = db.connect();
-    }    private void refreshTable() {
-        tm = new DefaultTableModel(
+    
+    // Helper Methods
+    
+    private Room buildRoomFromForm() {
+        Room room = new Room();
+        room.setName(nameInput.getText().trim());
+        room.setCapacity((Integer) capacityInput.getValue());
+        room.setLocation(locationInput.getText().trim());
+        return room;
+    }
+    
+    private void populateFormWithRoom(Room room) {
+        nameInput.setText(room.getName());
+        capacityInput.setValue(room.getCapacity());
+        locationInput.setText(room.getLocation());
+    }
+    
+    private void refreshTable() {
+        tableModel = new DefaultTableModel(
             null,
-            new Object[] { "Name", "Capacity", "Location" }
-        );
-        roomTable.setModel(tm);
-        tm.getDataVector().removeAllElements ();
-        try {
-            PreparedStatement s = con.prepareStatement ("SELECT name, capacity, location FROM rooms");
-            ResultSet r = s.executeQuery();
-            while (r.next()) {
-                Object[] data = {
-                    r.getString (1), r.getInt (2), r.getString (3)
-                };
-                tm.addRow(data);
+            new Object[] { "ID", "Name", "Capacity", "Location" }
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
             }
-        }catch (Exception e) {
-            System.out.print ("ERROR KUERI KE DATABASE: \n" + e + "\n\n");
+        };
+        
+        roomTable.setModel(tableModel);
+        
+        try {
+            List<Room> rooms = roomService.getAllRooms();
+            for (Room room : rooms) {
+                tableModel.addRow(new Object[] {
+                    room.getId(),
+                    room.getName(),
+                    room.getCapacity(),
+                    room.getLocation()
+                });
+            }
+            
+            // Hide ID column
+            roomTable.getColumnModel().getColumn(0).setMinWidth(0);
+            roomTable.getColumnModel().getColumn(0).setMaxWidth(0);
+            roomTable.getColumnModel().getColumn(0).setPreferredWidth(0);
+            
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, 
+                "Failed to load rooms:\n" + e.getMessage(), 
+                "Error", 
+                JOptionPane.ERROR_MESSAGE);
         }
     }
+    
     private void clearInputs() {
         nameInput.setText("");
-        capacityInput.setValue(1); 
+        capacityInput.setValue(1);
         locationInput.setText("");
-        buffNama = null; 
+        selectedRoom = null;
+        roomTable.clearSelection();
     }
     /**
      * This method is called from within the constructor to initialize the form.
@@ -211,81 +252,94 @@ public class RoomForm extends javax.swing.JInternalFrame {
 
     private void createButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_createButtonActionPerformed
         // TODO add your handling code here:
+        Room room = buildRoomFromForm();
+        
         try {
-            PreparedStatement ps = con.prepareStatement("INSERT INTO rooms (name, capacity, location) VALUES (?,?,?)");
-            ps.setString(1, nameInput.getText());
-            ps.setInt(2, (Integer) capacityInput.getValue());        
-            ps.setString(3, locationInput.getText());
-
-            int affectedRows = ps.executeUpdate();
-            if (affectedRows > 0) {
-                JOptionPane.showMessageDialog(this, "Ruangan berhasil ditambahkan!");
-            }
-
+            roomService.createRoom(room);
+            JOptionPane.showMessageDialog(this, 
+                "Room created successfully!", 
+                "Success", 
+                JOptionPane.INFORMATION_MESSAGE);
             refreshTable();
             clearInputs();
-        } catch(Exception e) {
-            System.out.print("ERROR QUERY KE DATABASE:\n" + e + "\n\n");
-            JOptionPane.showMessageDialog(this, "Gagal menambahkan ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, 
+                e.getMessage(), 
+                "Validation Error", 
+                JOptionPane.WARNING_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, 
+                "Failed to create room:\n" + e.getMessage(), 
+                "Error", 
+                JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_createButtonActionPerformed
 
     private void editButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editButtonActionPerformed
         // TODO add your handling code here:
-        if (buffNama == null || buffNama.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Pilih baris di tabel yang ingin diedit terlebih dahulu.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+        if (selectedRoom == null) {
+            JOptionPane.showMessageDialog(this, 
+                "Please select a room from the table first.", 
+                "Warning", 
+                JOptionPane.WARNING_MESSAGE);
             return;
         }
-
+        
+        // Update selected room with form data
+        selectedRoom.setName(nameInput.getText());
+        selectedRoom.setCapacity((Integer) capacityInput.getValue());
+        selectedRoom.setLocation(locationInput.getText());
+        
         try {
-            PreparedStatement ps = con.prepareStatement("UPDATE rooms SET name=?, capacity=?, location=? WHERE name=?");
-            
-            ps.setString(1, nameInput.getText());
-            ps.setInt(2, (Integer) capacityInput.getValue());        
-            ps.setString(3, locationInput.getText());
-            
-            ps.setString(4, buffNama); 
-
-            int affectedRows = ps.executeUpdate();
-            if (affectedRows > 0) {
-                JOptionPane.showMessageDialog(this, "Ruangan berhasil diubah!");
-            } else {
-                 JOptionPane.showMessageDialog(this, "Tidak ada ruangan yang diubah. Nama ruangan lama mungkin tidak ditemukan.", "Peringatan", JOptionPane.WARNING_MESSAGE);
-            }
-
+            roomService.updateRoom(selectedRoom);
+            JOptionPane.showMessageDialog(this, 
+                "Room updated successfully!", 
+                "Success", 
+                JOptionPane.INFORMATION_MESSAGE);
             refreshTable();
             clearInputs();
-        } catch(Exception e) {
-            System.out.print("ERROR QUERY KE DATABASE:\n" + e + "\n\n");
-            JOptionPane.showMessageDialog(this, "Gagal mengedit ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, 
+                e.getMessage(), 
+                "Validation Error", 
+                JOptionPane.WARNING_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, 
+                "Failed to update room:\n" + e.getMessage(), 
+                "Error", 
+                JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_editButtonActionPerformed
 
     private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
         // TODO add your handling code here:
-        if (nameInput.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Pilih baris di tabel yang ingin dihapus terlebih dahulu.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+       if (selectedRoom == null) {
+            JOptionPane.showMessageDialog(this, 
+                "Please select a room from the table first.", 
+                "Warning", 
+                JOptionPane.WARNING_MESSAGE);
             return;
         }
         
-        int dialogResult = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus ruangan " + nameInput.getText() + "?", "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION);
-        if (dialogResult == JOptionPane.YES_OPTION) {
+        int confirm = JOptionPane.showConfirmDialog(this, 
+            "Are you sure you want to delete room '" + selectedRoom.getName() + "'?", 
+            "Confirm Delete", 
+            JOptionPane.YES_NO_OPTION);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
             try {
-                PreparedStatement ps = con.prepareStatement("DELETE FROM rooms WHERE name=?");
-                ps.setString(1, nameInput.getText());
-                
-                int affectedRows = ps.executeUpdate();
-                if (affectedRows > 0) {
-                    JOptionPane.showMessageDialog(this, "Ruangan berhasil dihapus!");
-                } else {
-                     JOptionPane.showMessageDialog(this, "Tidak ada ruangan yang dihapus. Nama ruangan tidak ditemukan.", "Peringatan", JOptionPane.WARNING_MESSAGE);
-                }
-
+                roomService.deleteRoom(selectedRoom.getId());
+                JOptionPane.showMessageDialog(this, 
+                    "Room deleted successfully!", 
+                    "Success", 
+                    JOptionPane.INFORMATION_MESSAGE);
                 refreshTable();
                 clearInputs();
-            } catch(Exception e) {
-                System.out.print("ERROR QUERY KE DATABASE:\n" + e + "\n\n");
-                JOptionPane.showMessageDialog(this, "Gagal menghapus ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, 
+                    "Failed to delete room:\n" + e.getMessage(), 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
             }
         }
     }//GEN-LAST:event_deleteButtonActionPerformed
@@ -299,11 +353,20 @@ public class RoomForm extends javax.swing.JInternalFrame {
         // TODO add your handling code here:
         int selectedRow = roomTable.getSelectedRow();
         if (selectedRow >= 0) {
-            buffNama = tm.getValueAt(selectedRow, 0).toString(); 
+            // Get room ID from hidden column (index 0)
+            Integer roomId = (Integer) tableModel.getValueAt(selectedRow, 0);
             
-            nameInput.setText(tm.getValueAt(selectedRow, 0).toString());
-            capacityInput.setValue(Integer.valueOf(tm.getValueAt(selectedRow, 1).toString()));
-            locationInput.setText(tm.getValueAt(selectedRow, 2).toString());
+            try {
+                selectedRoom = roomService.getRoomById(roomId);
+                if (selectedRoom != null) {
+                    populateFormWithRoom(selectedRoom);
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, 
+                    "Failed to load room details:\n" + e.getMessage(), 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+            }
         }
     }//GEN-LAST:event_roomTableMouseClicked
 

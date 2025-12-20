@@ -29,11 +29,9 @@ public class Dashboard extends javax.swing.JFrame {
         jPanel = new javax.swing.JPanel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
-        listRoom = new javax.swing.JMenuItem();
         cudDataRoom = new javax.swing.JMenuItem();
         cudDataItem = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
-        listBooking = new javax.swing.JMenuItem();
         cudDataBooking = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -50,14 +48,6 @@ public class Dashboard extends javax.swing.JFrame {
         );
 
         jMenu1.setText("Room");
-
-        listRoom.setText("List Room");
-        listRoom.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                listRoomActionPerformed(evt);
-            }
-        });
-        jMenu1.add(listRoom);
 
         cudDataRoom.setText("CUD Data");
         cudDataRoom.addActionListener(new java.awt.event.ActionListener() {
@@ -78,14 +68,6 @@ public class Dashboard extends javax.swing.JFrame {
         jMenuBar1.add(jMenu1);
 
         jMenu2.setText("Booking");
-
-        listBooking.setText("List Booking");
-        listBooking.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                listBookingActionPerformed(evt);
-            }
-        });
-        jMenu2.add(listBooking);
 
         cudDataBooking.setText("CUD Data");
         cudDataBooking.addActionListener(new java.awt.event.ActionListener() {
@@ -113,33 +95,37 @@ public class Dashboard extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void listBookingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_listBookingActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_listBookingActionPerformed
-
-    private void listRoomActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_listRoomActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_listRoomActionPerformed
-
     private void cudDataRoomActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cudDataRoomActionPerformed
         // TODO add your handling code here:
+        jPanel.removeAll();
+        jPanel.repaint();
+        jPanel.revalidate();
+
         RoomForm room = new RoomForm();
         jPanel.add(room);
-        room.show();
+        room.setVisible(true);    
     }//GEN-LAST:event_cudDataRoomActionPerformed
 
     private void cudDataBookingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cudDataBookingActionPerformed
         // TODO add your handling code here:
+        jPanel.removeAll();
+        jPanel.repaint();
+        jPanel.revalidate();
+
         BookingForm booking = new BookingForm();
         jPanel.add(booking);
-        booking.show();
+        booking.setVisible(true);
     }//GEN-LAST:event_cudDataBookingActionPerformed
 
     private void cudDataItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cudDataItemActionPerformed
         // TODO add your handling code here:
+        jPanel.removeAll();
+        jPanel.repaint();
+        jPanel.revalidate();
+
         RoomItemForm roomItem = new RoomItemForm();
         jPanel.add(roomItem);
-        roomItem.show();
+        roomItem.setVisible(true);
     }//GEN-LAST:event_cudDataItemActionPerformed
 
     /**
@@ -185,7 +171,5 @@ public class Dashboard extends javax.swing.JFrame {
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JPanel jPanel;
-    private javax.swing.JMenuItem listBooking;
-    private javax.swing.JMenuItem listRoom;
     // End of variables declaration//GEN-END:variables
 }

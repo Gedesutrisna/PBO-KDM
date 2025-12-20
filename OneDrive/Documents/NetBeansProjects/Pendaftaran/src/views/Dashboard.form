@@ -9,14 +9,6 @@
             <Property name="text" type="java.lang.String" value="Room"/>
           </Properties>
           <SubComponents>
-            <MenuItem class="javax.swing.JMenuItem" name="listRoom">
-              <Properties>
-                <Property name="text" type="java.lang.String" value="List Room"/>
-              </Properties>
-              <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="listRoomActionPerformed"/>
-              </Events>
-            </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="cudDataRoom">
               <Properties>
                 <Property name="text" type="java.lang.String" value="CUD Data"/>
@@ -40,14 +32,6 @@
             <Property name="text" type="java.lang.String" value="Booking"/>
           </Properties>
           <SubComponents>
-            <MenuItem class="javax.swing.JMenuItem" name="listBooking">
-              <Properties>
-                <Property name="text" type="java.lang.String" value="List Booking"/>
-              </Properties>
-              <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="listBookingActionPerformed"/>
-              </Events>
-            </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="cudDataBooking">
               <Properties>
                 <Property name="text" type="java.lang.String" value="CUD Data"/>

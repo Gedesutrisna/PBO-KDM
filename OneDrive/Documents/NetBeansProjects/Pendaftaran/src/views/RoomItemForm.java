@@ -5,117 +5,144 @@
 package views;
 
 import database.DBConnection;
+import service.RoomItemService;
+import models.RoomItem;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
+import models.Room;
 /**
  *
  * @author user
  */
 public class RoomItemForm extends javax.swing.JInternalFrame {
-
-    DBConnection db = new DBConnection();
-    Connection con;
-    DefaultTableModel tm;
+    // Service Layer
+    private final RoomItemService itemService;
     
-    // Variabel untuk menyimpan ID Item dan ID Ruangan saat data dipilih dari tabel
-    private int selectedItemId = -1;
+    // UI State
+    private DefaultTableModel tableModel;
+    private RoomItem selectedItem;
     
-    /**
-     * Creates new form RoomItemForm
-     */
+    // Map to track Room objects by name
+    private Map<String, Room> roomMap = new HashMap<>();
+    
     public RoomItemForm() {
+        // Initialize database connection
+        DBConnection db = new DBConnection();
+        Connection con = db.connect();
+        
+        // Initialize service
+        this.itemService = new RoomItemService(con);
+        
+        // Initialize UI
         initComponents();
-        connect();
         loadRoomsToComboBox();
         refreshTable();
         clearInputs();
     }
-
-    private void connect(){
-        con = db.connect();
-    }
     
-    private void clearInputs() {
-        nameInput.setText("");
-        quantityInput.setValue(0); 
-        roomSelect.setSelectedIndex(-1); // Atur ke tidak ada yang terpilih
-        selectedItemId = -1;
-        createButton.setText("Tambah");
-        editButton.setEnabled(false);
-        deleteButton.setEnabled(false);
-    }
-    // Method untuk mendapatkan Room ID dari Room Name yang dipilih di ComboBox
-    private int getRoomIdByName(String roomName) {
-        int roomId = -1;
-        String sql = "SELECT id FROM rooms WHERE name = ?";
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, roomName);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                roomId = rs.getInt("id");
-            }
-        } catch (Exception e) {
-            System.out.println("ERROR GETTING ROOM ID: " + e.getMessage());
-        }
-        return roomId;
-    }
+    // Helper Methods
     
-    // Method untuk mengisi ComboBox dengan daftar ruangan
     private void loadRoomsToComboBox() {
-        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
-        String sql = "SELECT name FROM rooms ORDER BY name";
-        try (Statement s = con.createStatement();
-             ResultSet r = s.executeQuery(sql)) {
+        try {
+            roomMap.clear();
             
-            while (r.next()) {
-                model.addElement(r.getString("name"));
+            List<Room> rooms = itemService.getAllRooms();
+            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+            
+            for (Room room : rooms) {
+                model.addElement(room.getName());
+                roomMap.put(room.getName(), room);
             }
+            
             roomSelect.setModel(model);
-            roomSelect.setSelectedIndex(-1); // Awalnya tidak ada yang terpilih
+            roomSelect.setSelectedIndex(-1);
+            
         } catch (Exception e) {
-            System.out.print("ERROR MEMUAT DAFTAR RUANGAN: \n" + e + "\n\n");
-            JOptionPane.showMessageDialog(this, "Gagal memuat daftar ruangan: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                "Failed to load rooms:\n" + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private RoomItem buildItemFromForm() {
+        RoomItem item = new RoomItem();
+        item.setName(nameInput.getText().trim());
+        item.setQuantity((Integer) quantityInput.getValue());
+        
+        // Get room ID from selected room name
+        String selectedRoomName = (String) roomSelect.getSelectedItem();
+        if (selectedRoomName != null) {
+            Room selectedRoom = roomMap.get(selectedRoomName);
+            if (selectedRoom != null) {
+                item.setRoomId(selectedRoom.getId());
+                item.setRoomName(selectedRoom.getName());
+            }
+        }
+        
+        return item;
+    }
+    
+    private void populateFormWithItem(RoomItem item) {
+        nameInput.setText(item.getName());
+        quantityInput.setValue(item.getQuantity());
+        
+        if (item.getRoomName() != null) {
+            roomSelect.setSelectedItem(item.getRoomName());
         }
     }
     
     private void refreshTable() {
-        tm = new DefaultTableModel(
+        tableModel = new DefaultTableModel(
             null,
-            new Object[] { "ID", "Name", "Quantity", "Room Name" }
-        );
-        itemTable.setModel(tm);
-        tm.getDataVector().removeAllElements ();
-        try {
-            // Join rooms dan room_items untuk menampilkan nama ruangan
-            String sql = "SELECT ri.id, ri.name, ri.quantity, r.name AS room_name " +
-                         "FROM room_items ri JOIN rooms r ON ri.room_id = r.id " +
-                         "ORDER BY r.name, ri.name";
-            
-            PreparedStatement s = con.prepareStatement (sql);
-            ResultSet r = s.executeQuery();
-            while (r.next()) {
-                Object[] data = {
-                    r.getInt ("id"), 
-                    r.getString ("name"), 
-                    r.getInt ("quantity"), 
-                    r.getString ("room_name")
-                };
-                tm.addRow(data);
+            new Object[] { "ID", "Name", "Quantity", "Room" }
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
             }
-            // Sembunyikan kolom ID (kolom 0) dari tampilan pengguna
-            itemTable.getColumnModel().getColumn(0).setMaxWidth(0);
+        };
+        
+        itemTable.setModel(tableModel);
+        
+        try {
+            List<RoomItem> items = itemService.getAllItems();
+            for (RoomItem item : items) {
+                tableModel.addRow(new Object[] {
+                    item.getId(),
+                    item.getName(),
+                    item.getQuantity(),
+                    item.getRoomName()
+                });
+            }
+            
+            // Hide ID column
             itemTable.getColumnModel().getColumn(0).setMinWidth(0);
+            itemTable.getColumnModel().getColumn(0).setMaxWidth(0);
             itemTable.getColumnModel().getColumn(0).setPreferredWidth(0);
-
-        }catch (Exception e) {
-            System.out.print ("ERROR KUERI KE DATABASE: \n" + e + "\n\n");
-            JOptionPane.showMessageDialog(this, "Gagal memuat data item ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                "Failed to load items:\n" + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    private void clearInputs() {
+        nameInput.setText("");
+        quantityInput.setValue(0);
+        roomSelect.setSelectedIndex(-1);
+        selectedItem = null;
+        itemTable.clearSelection();
+        editButton.setEnabled(false);
+        deleteButton.setEnabled(false);
+        createButton.setText("Tambah");
     }
 
     /**
@@ -213,6 +240,11 @@ public class RoomItemForm extends javax.swing.JInternalFrame {
                 "Title 1", "Title 2", "Title 3", "Title 4"
             }
         ));
+        itemTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                itemTableMouseClicked(evt);
+            }
+        });
         jScrollPane2.setViewportView(itemTable);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -279,62 +311,29 @@ public class RoomItemForm extends javax.swing.JInternalFrame {
 
     private void createButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_createButtonActionPerformed
         // TODO add your handling code here:
-        String itemName = nameInput.getText();
-        Integer itemQuantity = (Integer) quantityInput.getValue();
-        String selectedRoomName = (String) roomSelect.getSelectedItem();
-
-        if (itemName.isEmpty() || itemQuantity < 0 || selectedRoomName == null) {
-            JOptionPane.showMessageDialog(this, "Semua field harus diisi dengan benar.", "Peringatan", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+        RoomItem item = buildItemFromForm();
         
-        int roomId = getRoomIdByName(selectedRoomName);
-        if (roomId == -1) {
-             JOptionPane.showMessageDialog(this, "Ruangan tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
         try {
-            String sql = "INSERT INTO room_items (name, quantity, room_id) VALUES (?,?,?)";
-            PreparedStatement ps = con.prepareStatement(sql);
-            ps.setString(1, itemName);
-            ps.setInt(2, itemQuantity);        
-            ps.setInt(3, roomId);
-
-            int affectedRows = ps.executeUpdate();
-            if (affectedRows > 0) {
-                JOptionPane.showMessageDialog(this, "Item ruangan berhasil ditambahkan!");
-            }
-
+            itemService.createRoomItem(item);
+            JOptionPane.showMessageDialog(this,
+                "Item created successfully!",
+                "Success",
+                JOptionPane.INFORMATION_MESSAGE);
             refreshTable();
             clearInputs();
-        } catch(Exception e) {
-            System.out.print("ERROR QUERY INSERT ITEM:\n" + e + "\n\n");
-            JOptionPane.showMessageDialog(this, "Gagal menambahkan item ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this,
+                e.getMessage(),
+                "Validation Error",
+                JOptionPane.WARNING_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                "Failed to create item:\n" + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_createButtonActionPerformed
 
-    private void itemTableMouseClicked(java.awt.event.MouseEvent evt) {                                     
-        int selectedRow = itemTable.getSelectedRow();
-        if (selectedRow >= 0) {
-            // Ambil ID dari kolom tersembunyi (kolom 0)
-            selectedItemId = Integer.valueOf(tm.getValueAt(selectedRow, 0).toString()); 
-            
-            // Ambil data dan tampilkan di input
-            nameInput.setText(tm.getValueAt(selectedRow, 1).toString());
-            quantityInput.setValue(Integer.valueOf(tm.getValueAt(selectedRow, 2).toString()));
-            
-            // Pilih Room Name yang sesuai di ComboBox
-            String roomName = tm.getValueAt(selectedRow, 3).toString();
-            roomSelect.setSelectedItem(roomName);
-            
-            // Aktifkan tombol Edit dan Hapus
-            editButton.setEnabled(true);
-            deleteButton.setEnabled(true);
-            createButton.setText("Simpan Baru");
-        }
-    }
-    
     private void roomSelectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_roomSelectActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_roomSelectActionPerformed
@@ -346,81 +345,102 @@ public class RoomItemForm extends javax.swing.JInternalFrame {
 
     private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
         // TODO add your handling code here:
-        if (selectedItemId == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih baris di tabel yang ingin dihapus terlebih dahulu.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+        if (selectedItem == null) {
+            JOptionPane.showMessageDialog(this,
+                "Please select an item from the table first.",
+                "Warning",
+                JOptionPane.WARNING_MESSAGE);
             return;
         }
         
-        String itemName = nameInput.getText();
-        int dialogResult = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus item " + itemName + "?", "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to delete '" + selectedItem.getName() + "'?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION);
         
-        if (dialogResult == JOptionPane.YES_OPTION) {
+        if (confirm == JOptionPane.YES_OPTION) {
             try {
-                String sql = "DELETE FROM room_items WHERE id=?";
-                PreparedStatement ps = con.prepareStatement(sql);
-                ps.setInt(1, selectedItemId);
-                
-                int affectedRows = ps.executeUpdate();
-                if (affectedRows > 0) {
-                    JOptionPane.showMessageDialog(this, "Item ruangan berhasil dihapus!");
-                } else {
-                     JOptionPane.showMessageDialog(this, "Tidak ada item ruangan yang dihapus.", "Peringatan", JOptionPane.WARNING_MESSAGE);
-                }
-
+                itemService.deleteRoomItem(selectedItem.getId());
+                JOptionPane.showMessageDialog(this,
+                    "Item deleted successfully!",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE);
                 refreshTable();
                 clearInputs();
-            } catch(Exception e) {
-                System.out.print("ERROR QUERY DELETE ITEM:\n" + e + "\n\n");
-                JOptionPane.showMessageDialog(this, "Gagal menghapus item ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                    "Failed to delete item:\n" + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
             }
         }
     }//GEN-LAST:event_deleteButtonActionPerformed
 
     private void editButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editButtonActionPerformed
         // TODO add your handling code here:
-        if (selectedItemId == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih baris di tabel yang ingin diedit terlebih dahulu.", "Peringatan", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String itemName = nameInput.getText();
-        Integer itemQuantity = (Integer) quantityInput.getValue();
-        String selectedRoomName = (String) roomSelect.getSelectedItem();
-
-        if (itemName.isEmpty() || itemQuantity < 0 || selectedRoomName == null) {
-            JOptionPane.showMessageDialog(this, "Semua field harus diisi dengan benar.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+        if (selectedItem == null) {
+            JOptionPane.showMessageDialog(this,
+                "Please select an item from the table first.",
+                "Warning",
+                JOptionPane.WARNING_MESSAGE);
             return;
         }
         
-        int roomId = getRoomIdByName(selectedRoomName);
-        if (roomId == -1) {
-             JOptionPane.showMessageDialog(this, "Ruangan tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try {
-            String sql = "UPDATE room_items SET name=?, quantity=?, room_id=? WHERE id=?";
-            PreparedStatement ps = con.prepareStatement(sql);
-            
-            ps.setString(1, itemName);
-            ps.setInt(2, itemQuantity);        
-            ps.setInt(3, roomId);
-            ps.setInt(4, selectedItemId); // Kriteria WHERE berdasarkan ID item
-
-            int affectedRows = ps.executeUpdate();
-            if (affectedRows > 0) {
-                JOptionPane.showMessageDialog(this, "Item ruangan berhasil diubah!");
-            } else {
-                 JOptionPane.showMessageDialog(this, "Tidak ada item ruangan yang diubah.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+        // Update selected item with form data
+        selectedItem.setName(nameInput.getText().trim());
+        selectedItem.setQuantity((Integer) quantityInput.getValue());
+        
+        String selectedRoomName = (String) roomSelect.getSelectedItem();
+        if (selectedRoomName != null) {
+            Room selectedRoom = roomMap.get(selectedRoomName);
+            if (selectedRoom != null) {
+                selectedItem.setRoomId(selectedRoom.getId());
             }
-
+        }
+        
+        try {
+            itemService.updateRoomItem(selectedItem);
+            JOptionPane.showMessageDialog(this,
+                "Item updated successfully!",
+                "Success",
+                JOptionPane.INFORMATION_MESSAGE);
             refreshTable();
             clearInputs();
-        } catch(Exception e) {
-            System.out.print("ERROR QUERY UPDATE ITEM:\n" + e + "\n\n");
-            JOptionPane.showMessageDialog(this, "Gagal mengedit item ruangan:\n" + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this,
+                e.getMessage(),
+                "Validation Error",
+                JOptionPane.WARNING_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                "Failed to update item:\n" + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_editButtonActionPerformed
+
+    private void itemTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_itemTableMouseClicked
+        // TODO add your handling code here:
+        int selectedRow = itemTable.getSelectedRow();
+        if (selectedRow >= 0) {
+            Integer itemId = (Integer) tableModel.getValueAt(selectedRow, 0);
+            
+            try {
+                selectedItem = itemService.getItemById(itemId);
+                if (selectedItem != null) {
+                    populateFormWithItem(selectedItem);
+                    editButton.setEnabled(true);
+                    deleteButton.setEnabled(true);
+                    createButton.setText("Simpan Baru");
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                    "Failed to load item details:\n" + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }//GEN-LAST:event_itemTableMouseClicked
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
